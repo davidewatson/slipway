@@ -1,0 +1,80 @@
+
+---
+apiVersion: apiextensions.k8s.io/v1beta1
+kind: CustomResourceDefinition
+metadata:
+  annotations:
+    controller-gen.kubebuilder.io/version: v0.2.5
+  creationTimestamp: null
+  name: imagemirrors.slipway.k8s.facebook.com.k8s.facebook.com
+spec:
+  group: slipway.k8s.facebook.com.k8s.facebook.com
+  names:
+    kind: ImageMirror
+    listKind: ImageMirrorList
+    plural: imagemirrors
+    singular: imagemirror
+  scope: Namespaced
+  validation:
+    openAPIV3Schema:
+      description: ImageMirror is the Schema for the imagemirrors API
+      properties:
+        apiVersion:
+          description: 'APIVersion defines the versioned schema of this representation
+            of an object. Servers should convert recognized schemas to the latest
+            internal value, and may reject unrecognized values. More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#resources'
+          type: string
+        kind:
+          description: 'Kind is a string value representing the REST resource this
+            object represents. Servers may infer this from the endpoint the client
+            submits requests to. Cannot be updated. In CamelCase. More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#types-kinds'
+          type: string
+        metadata:
+          type: object
+        spec:
+          description: ImageMirrorSpec defines the desired state of ImageMirror
+          properties:
+            image_name:
+              description: ImageName is the name of the image without tag (e.g. cuda).
+              type: string
+            source_repository:
+              description: SourceRepository is the url resource (e.g. ncr.io).
+              type: string
+            start_time:
+              description: StartTime is
+              type: string
+            tag_regex:
+              description: TagRegex is a regex matching the tags which should be mirrored.
+              type: string
+          type: object
+        status:
+          description: ImageMirrorStatus defines the observed state of ImageMirror
+          properties:
+            available_tags:
+              description: Reported Tags is array of tags which have the reported
+                by the registry.
+              items:
+                type: string
+              type: array
+            mirrored_tags:
+              description: MirroredTags is an array of tags which have already been
+                mirrored.
+              items:
+                type: string
+              type: array
+          required:
+          - available_tags
+          - mirrored_tags
+          type: object
+      type: object
+  version: v1
+  versions:
+  - name: v1
+    served: true
+    storage: true
+status:
+  acceptedNames:
+    kind: ""
+    plural: ""
+  conditions: []
+  storedVersions: []

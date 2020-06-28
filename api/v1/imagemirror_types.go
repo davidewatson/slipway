@@ -20,22 +20,26 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
-// EDIT THIS FILE!  THIS IS SCAFFOLDING FOR YOU TO OWN!
-// NOTE: json tags are required.  Any new fields you add must have json tags for the fields to be serialized.
+// Important: Run "make" to regenerate code after modifying this file
 
 // ImageMirrorSpec defines the desired state of ImageMirror
 type ImageMirrorSpec struct {
-	// INSERT ADDITIONAL SPEC FIELDS - desired state of cluster
-	// Important: Run "make" to regenerate code after modifying this file
-
-	// Foo is an example field of ImageMirror. Edit ImageMirror_types.go to remove/update
-	Foo string `json:"foo,omitempty"`
+	// SourceRepository is the url resource (e.g. ncr.io).
+	SourceRepository string `json:"source_repository,omitempty"`
+	// ImageName is the name of the image without tag (e.g. cuda).
+	ImageName string `json:"image_name,omitempty"`
+	// TagRegex is a regex matching the tags which should be mirrored.
+	TagRegex string `json:"tag_regex,omitempty"`
+	// StartTime is
+	StartTime string `json:"start_time,omitempty"`
 }
 
 // ImageMirrorStatus defines the observed state of ImageMirror
 type ImageMirrorStatus struct {
-	// INSERT ADDITIONAL STATUS FIELD - define observed state of cluster
-	// Important: Run "make" to regenerate code after modifying this file
+	// MirroredTags is an array of tags which have already been mirrored.
+	MirroredTags []string `json:"mirrored_tags"`
+	// Reported Tags is array of tags which have the reported by the registry.
+	SeenTags []string `json:"available_tags"`
 }
 
 // +kubebuilder:object:root=true
