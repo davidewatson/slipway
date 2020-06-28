@@ -1,0 +1,20 @@
+# permissions for end users to view imagemirrors.
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: imagemirror-viewer-role
+rules:
+- apiGroups:
+  - slipway.k8s.facebook.com.k8s.facebook.com
+  resources:
+  - imagemirrors
+  verbs:
+  - get
+  - list
+  - watch
+- apiGroups:
+  - slipway.k8s.facebook.com.k8s.facebook.com
+  resources:
+  - imagemirrors/status
+  verbs:
+  - get

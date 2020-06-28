@@ -1,0 +1,24 @@
+# permissions for end users to edit imagemirrors.
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: imagemirror-editor-role
+rules:
+- apiGroups:
+  - slipway.k8s.facebook.com.k8s.facebook.com
+  resources:
+  - imagemirrors
+  verbs:
+  - create
+  - delete
+  - get
+  - list
+  - patch
+  - update
+  - watch
+- apiGroups:
+  - slipway.k8s.facebook.com.k8s.facebook.com
+  resources:
+  - imagemirrors/status
+  verbs:
+  - get

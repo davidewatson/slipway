@@ -1,0 +1,7 @@
+apiVersion: slipway.k8s.facebook.com.k8s.facebook.com/v1
+kind: ImageMirror
+metadata:
+  name: imagemirror-sample
+spec:
+  # Add fields here
+  foo: bar
