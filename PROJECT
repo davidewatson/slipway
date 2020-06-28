@@ -1,0 +1,3 @@
+domain: k8s.facebook.com
+repo: github.com/davidewatson/slipway
+version: "2"
