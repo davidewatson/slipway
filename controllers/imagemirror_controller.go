@@ -25,6 +25,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	slipwayk8sfacebookcomv1 "github.com/davidewatson/slipway/api/v1"
+	"github.com/davidewatson/slipway/pkg/mirror"
 )
 
 // ImageMirrorReconciler reconciles a ImageMirror object
@@ -41,7 +42,8 @@ func (r *ImageMirrorReconciler) Reconcile(req ctrl.Request) (ctrl.Result, error)
 	_ = context.Background()
 	_ = r.Log.WithValues("imagemirror", req.NamespacedName)
 
-	// your logic here
+	cli := mirror.NewClient("nvcr.io/nvidia", "dtr.thefacebook.com/k8s")
+	_ = cli.ListImages()
 
 	return ctrl.Result{}, nil
 }
