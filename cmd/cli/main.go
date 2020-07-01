@@ -3,8 +3,8 @@ package main
 import (
 	"flag"
 
-        //"github.com/go-logr/logr"
-        "sigs.k8s.io/controller-runtime/pkg/log/zap"
+	//"github.com/go-logr/logr"
+	"sigs.k8s.io/controller-runtime/pkg/log/zap"
 
 	slipwayclient "github.com/davidewatson/slipway/controllers"
 )

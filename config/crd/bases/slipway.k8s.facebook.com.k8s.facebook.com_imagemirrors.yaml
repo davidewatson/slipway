@@ -6,9 +6,9 @@ metadata:
   annotations:
     controller-gen.kubebuilder.io/version: v0.2.5
   creationTimestamp: null
-  name: imagemirrors.slipway.k8s.facebook.com.k8s.facebook.com
+  name: imagemirrors.slipway.k8s.facebook.com
 spec:
-  group: slipway.k8s.facebook.com.k8s.facebook.com
+  group: slipway.k8s.facebook.com
   names:
     kind: ImageMirror
     listKind: ImageMirrorList
@@ -60,20 +60,13 @@ spec:
         status:
           description: ImageMirrorStatus defines the observed state of ImageMirror
           properties:
-            available_tags:
-              description: ReportedTags is array of tags which have the reported by
-                the registry.
-              items:
-                type: string
-              type: array
             mirrored_tags:
-              description: MirroredTags is an array of tags which have already been
+              description: MirroredTags is a slice of tags which have already been
                 mirrored.
               items:
                 type: string
               type: array
           required:
-          - available_tags
           - mirrored_tags
           type: object
       type: object

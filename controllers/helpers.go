@@ -24,7 +24,6 @@ import (
 	"github.com/google/go-containerregistry/pkg/name"
 	"github.com/google/go-containerregistry/pkg/v1/remote"
 	"github.com/pkg/errors"
-
 	// This dependency was copied into the operator to avoid client-go
 	// dependency conflicts between flux and kubebuilder. This may or
 	// may not be the best solution to an unfortunately common problem.
@@ -51,9 +50,9 @@ func Union(a, b []string) []string {
 // Intersection takes two slices of string, say a and b, and returns a slice c
 // such that for all x exist in c -> x exist in a _and_ x exist in b.
 func Intersection(a, b []string) []string {
-        c := make([]string, 0)
+	c := make([]string, 0)
 	for _, item := range a {
-                c = append(c, item)
+		c = append(c, item)
 	}
 	for _, item := range b {
 		c = append(c, item)
@@ -65,18 +64,18 @@ func Intersection(a, b []string) []string {
 // Difference takes two slices of string, say a and b, and returns a slice c
 // such that for all x exist in c -> x exist in a and x _not_ exist in b.
 func Difference(a, b []string) []string {
-        seen := make(map[string]bool)
-        for _, item := range b {
-                seen[item] = true
-        }
+	seen := make(map[string]bool)
+	for _, item := range b {
+		seen[item] = true
+	}
 
-        c := make([]string, 0)
-        for _, item := range a {
-                if _, ok := seen[item]; !ok {
-                        c = append(c, item)
-                }
-        }
-        return c
+	c := make([]string, 0)
+	for _, item := range a {
+		if _, ok := seen[item]; !ok {
+			c = append(c, item)
+		}
+	}
+	return c
 }
 
 // Filter takes a slice of tags and returns a new slice such that each tag
@@ -94,8 +93,8 @@ func Filter(tags []string, pattern string) []string {
 	return passed
 }
 
-// MirrorImage lists all tags for the image from the sourceRepository
-// and writes them to the destinationRepository iff they are not already
+// MirrorImage lists all tags for the image from the source repository
+// and writes them to the destination repository iff they are not already
 // there, and they match pattern. Returns the tags already mirrored, and
 // an error, if any.
 func MirrorImage(sourceRepoName, destRepoName, imageName, pattern string, log logr.Logger) ([]string, error) {
@@ -129,11 +128,11 @@ func MirrorImage(sourceRepoName, destRepoName, imageName, pattern string, log lo
 	mirroredTags := Intersection(filteredTags, destTags)
 	missingTags := Difference(filteredTags, destTags)
 
-        log.Info("Source repository tags", "sourceTags", sourceTags)
-        log.Info("Destination repository tags", "destTags", destTags)
-        log.Info("Filtered source repository tags", "filteredTags", filteredTags)
-        log.Info("Mirrored destination tags", "mirroredTags", mirroredTags)
-        log.Info("Missing destination tags", "missingTags", missingTags)
+	log.Info("Source repository tags", "sourceTags", sourceTags)
+	log.Info("Destination repository tags", "destTags", destTags)
+	log.Info("Filtered source repository tags", "filteredTags", filteredTags)
+	log.Info("Mirrored destination tags", "mirroredTags", mirroredTags)
+	log.Info("Missing destination tags", "missingTags", missingTags)
 
 	for _, tag := range missingTags {
 		sourceNameWithTag := sourceName + ":" + tag
