@@ -21,15 +21,20 @@ spec:
   pattern: "semver: ~7"
 ```
 
-# Writing an operator
+# Developer notes
+
+## Creating a new operator
 
 First you need a name.
-It is traditional to choose a nautical term (cf. http://phrontistery.info/nautical.html).
+This is very important.
+Within the k8s community it is traditional to choose a nautical term (cf. http://phrontistery.info/nautical.html).
 What would make a good tradition @ Facebook?
 
 ```bash
 alias k="kubectl"
 ```
+
+### Install prerequisites
 
 Install kind (https://kind.sigs.k8s.io/docs/user/quick-start/):
 
@@ -63,6 +68,8 @@ sudo mv /tmp/kubebuilder_2.3.1_${os}_${arch} /usr/local/kubebuilder
 export PATH=$PATH:/usr/local/kubebuilder/bin
 ```
 
+### Generate project scaffolding
+
 Generate kubebuilder project and new Kubernetes API (group and version):
 
 ```bash
@@ -73,7 +80,11 @@ kubebuilder create api --group slipway --version v1 --kind ImageMirror
 make
 ```
 
+### Write code
+
 ...
+
+### Build and test
 
 Create a kind cluster to test it:
 
@@ -92,8 +103,8 @@ make install
 Test it...
 
 ```bash
-kind load docker-image dtr.thefacebook.com/dwat/slipway:0.1.0
 make docker-build docker-push IMG=dtr.thefacebook.com/dwat/slipway:0.1.0
+kind load docker-image dtr.thefacebook.com/dwat/slipway:0.1.0
 make deploy
 ```
 

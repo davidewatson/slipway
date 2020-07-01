@@ -1,7 +1,9 @@
-apiVersion: slipway.k8s.facebook.com.k8s.facebook.com/v1
+apiVersion: slipway.k8s.facebook.com/v1
 kind: ImageMirror
 metadata:
-  name: imagemirror-sample
+  name: centos
 spec:
-  # Add fields here
-  foo: bar
+  sourceRepository: docker.io/
+  destRepository: dtr.thefacebook.com/dwat/
+  imageName: centos
+  pattern: "semver: ~7"
