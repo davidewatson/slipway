@@ -34,25 +34,35 @@ spec:
         spec:
           description: ImageMirrorSpec defines the desired state of ImageMirror
           properties:
+            dest_repository:
+              description: DestRepository is a URL resource as above, which is used
+                to push mirrored container images.
+              type: string
             image_name:
               description: ImageName is the name of the image without tag (e.g. cuda).
               type: string
             source_repository:
-              description: SourceRepository is the url resource (e.g. ncr.io).
-              type: string
-            start_time:
-              description: StartTime is
+              description: 'SourceRepository is a URL resource, including scheme (optional),
+                registry host, and registry organization (e.g. docker.io/dwat/) which
+                will be used to pull images to mirror. NOTE: This must not include
+                the container image name or any tags.'
               type: string
             tag_regex:
-              description: TagRegex is a regex matching the tags which should be mirrored.
+              description: Pattern is a regex matching the tags which should be mirrored.
+                We follow Flux (who of course copied as well) because compatibility
+                is nice for our users. Cf. https://github.com/fluxcd/flux/blob/v1.19.0/pkg/policy/pattern.go
               type: string
+          required:
+          - dest_repository
+          - image_name
+          - source_repository
           type: object
         status:
           description: ImageMirrorStatus defines the observed state of ImageMirror
           properties:
             available_tags:
-              description: Reported Tags is array of tags which have the reported
-                by the registry.
+              description: ReportedTags is array of tags which have the reported by
+                the registry.
               items:
                 type: string
               type: array

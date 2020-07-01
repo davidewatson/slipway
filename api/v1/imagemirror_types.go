@@ -24,22 +24,30 @@ import (
 
 // ImageMirrorSpec defines the desired state of ImageMirror
 type ImageMirrorSpec struct {
-	// SourceRepository is the url resource (e.g. ncr.io).
-	SourceRepository string `json:"source_repository,omitempty"`
+	// SourceRepository is a URL resource, including scheme (optional),
+	// registry host, and registry organization (e.g. docker.io/dwat/) which
+	// will be used to pull images to mirror. NOTE: This must not include
+	// the container image name or any tags.
+	SourceRepository string `json:"source_repository,required"`
+
+	// DestRepository is a URL resource as above, which is used to
+	// push mirrored container images.
+	DestRepository string `json:"dest_repository,required"`
+
 	// ImageName is the name of the image without tag (e.g. cuda).
-	ImageName string `json:"image_name,omitempty"`
-	// TagRegex is a regex matching the tags which should be mirrored.
-	TagRegex string `json:"tag_regex,omitempty"`
-	// StartTime is
-	StartTime string `json:"start_time,omitempty"`
+	ImageName string `json:"image_name,required"`
+
+	// Pattern is a regex matching the tags which should be mirrored. We
+	// follow Flux (who of course copied as well) because compatibility
+	// is nice for our users. Cf.
+	// https://github.com/fluxcd/flux/blob/v1.19.0/pkg/policy/pattern.go
+	Pattern string `json:"tag_regex,omitempty"`
 }
 
 // ImageMirrorStatus defines the observed state of ImageMirror
 type ImageMirrorStatus struct {
-	// MirroredTags is an array of tags which have already been mirrored.
+	// MirroredTags is a slice of tags which have already been mirrored.
 	MirroredTags []string `json:"mirrored_tags"`
-	// Reported Tags is array of tags which have the reported by the registry.
-	SeenTags []string `json:"available_tags"`
 }
 
 // +kubebuilder:object:root=true

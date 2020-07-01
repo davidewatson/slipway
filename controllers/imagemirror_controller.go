@@ -18,6 +18,7 @@ package controllers
 
 import (
 	"context"
+	"time"
 
 	"github.com/go-logr/logr"
 	"k8s.io/apimachinery/pkg/runtime"
@@ -25,7 +26,6 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	slipwayk8sfacebookcomv1 "github.com/davidewatson/slipway/api/v1"
-	"github.com/davidewatson/slipway/pkg/mirror"
 )
 
 // ImageMirrorReconciler reconciles a ImageMirror object
@@ -39,11 +39,38 @@ type ImageMirrorReconciler struct {
 // +kubebuilder:rbac:groups=slipway.k8s.facebook.com.k8s.facebook.com,resources=imagemirrors/status,verbs=get;update;patch
 
 func (r *ImageMirrorReconciler) Reconcile(req ctrl.Request) (ctrl.Result, error) {
-	_ = context.Background()
-	_ = r.Log.WithValues("imagemirror", req.NamespacedName)
+	var imageMirror slipwayk8sfacebookcomv1.ImageMirror
 
-	cli := mirror.NewClient("nvcr.io/nvidia", "dtr.thefacebook.com/k8s")
-	_ = cli.ListImages()
+	ctx := context.Background()
+	log := r.Log.WithValues("imagemirror", req.NamespacedName)
+
+	// Get current version of the spec.
+	if err := r.Get(ctx, req.NamespacedName, &imageMirror); err != nil {
+		log.Error(err, "unable to fetch ImageMirror")
+		// we'll ignore not-found errors, since they can't be fixed by an immediate
+		// requeue (we'll need to wait for a new notification), and we can get them
+		// on deleted requests.
+		return ctrl.Result{}, client.IgnoreNotFound(err)
+	}
+
+	// Mirror tags based on the users intent.
+	mirroredTags, err := MirrorImage(
+		imageMirror.Spec.SourceRepository,
+		imageMirror.Spec.DestRepository,
+		imageMirror.Spec.ImageName,
+		imageMirror.Spec.Pattern,
+		log,
+	)
+	if err != nil {
+		return ctrl.Result{RequeueAfter: time.Minute}, err
+	}
+
+	// Update status with the current state.
+	imageMirror.Status.MirroredTags = mirroredTags
+	if err := r.Status().Update(ctx, &imageMirror); err != nil {
+		log.Error(err, "unable to update ImageMirror status")
+		return ctrl.Result{}, err
+	}
 
 	return ctrl.Result{}, nil
 }
