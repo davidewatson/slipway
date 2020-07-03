@@ -54,13 +54,7 @@ func (r *ImageMirrorReconciler) Reconcile(req ctrl.Request) (ctrl.Result, error)
 	}
 
 	// Mirror tags based on the users intent.
-	mirroredTags, err := MirrorImage(
-		imageMirror.Spec.SourceRepository,
-		imageMirror.Spec.DestRepository,
-		imageMirror.Spec.ImageName,
-		imageMirror.Spec.Pattern,
-		log,
-	)
+	mirroredTags, err := MirrorImage(imageMirror.Spec, ctx, log)
 	if err != nil {
 		return ctrl.Result{RequeueAfter: time.Minute}, err
 	}

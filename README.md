@@ -94,18 +94,21 @@ export KUBECONFIG="$(kind get kubeconfig-path --name="kind")"
 kubectl cluster-info
 ```
 
-Install it:
+Deploy it:
 
 ```bash
 make install
-```
-
-Test it...
-
-```bash
 make docker-build docker-push IMG=dtr.thefacebook.com/dwat/slipway:0.1.0
 kind load docker-image dtr.thefacebook.com/dwat/slipway:0.1.0
 make deploy
 ```
 
 Note that the `kind load` above is only necessary because our dtr docker images are currently unsigned.
+
+And finally test it:
+
+```bash
+k apply -f config/samples/slipway.k8s.facebook.com_v1_imagemirror.yaml 
+k describe imagemirror
+docker pull dtr.thefacebook.com/dwat/centos:7.8.2003
+```

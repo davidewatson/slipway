@@ -6,6 +6,7 @@ import (
 	//"github.com/go-logr/logr"
 	"sigs.k8s.io/controller-runtime/pkg/log/zap"
 
+	v1 "github.com/davidewatson/slipway/api/v1"
 	slipwayclient "github.com/davidewatson/slipway/controllers"
 )
 
@@ -15,5 +16,12 @@ func main() {
 	//dest := flag.String("dest", "dtr.thefacebook.com/dwat/", "destination repository URL")
 
 	log := zap.New(zap.UseDevMode(true))
-	_, _ = slipwayclient.MirrorImage(*src, *dest, "centos", "glob: 8*", log)
+
+	_, _ = slipwayclient.MirrorImage(v1.ImageMirrorSpec{
+		SourceRepository: *src,
+		DestRepository:   *dest,
+		ImageName:        "centos",
+		Pattern:          "glob: 8*",
+	},
+		nil, log)
 }

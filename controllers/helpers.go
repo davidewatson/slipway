@@ -10,7 +10,7 @@ You may obtain a copy of the License at
 Unless required by applicable law or agreed to in writing, software
 distributed under the License is distributed on an "AS IS" BASIS,
 WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-See the License for the specific language governing permissions and
+See the License for the spec.fic language governing permissions and
 limitations under the License.
 */
 
@@ -28,17 +28,19 @@ import (
 	// dependency conflicts between flux and kubebuilder. This may or
 	// may not be the best solution to an unfortunately common problem.
 	//"github.com/fluxcd/flux/pkg/policy"
+
+	slipwayk8sfacebookcomv1 "github.com/davidewatson/slipway/api/v1"
 )
 
 // Union takes two slices of string, say a and b, and returns a slice c
 // such that for all x exist in c -> x exist in a _or_ x exist in b.
-func Union(a, b []string) []string {
+func Union(a, b []string) (c []string) {
 	seen := make(map[string]bool)
 	for _, item := range b {
 		seen[item] = true
+		c = append(c, item)
 	}
 
-	c := make([]string, 0)
 	for _, item := range a {
 		if _, ok := seen[item]; !ok {
 			c = append(c, item)
@@ -49,33 +51,34 @@ func Union(a, b []string) []string {
 
 // Intersection takes two slices of string, say a and b, and returns a slice c
 // such that for all x exist in c -> x exist in a _and_ x exist in b.
-func Intersection(a, b []string) []string {
-	c := make([]string, 0)
-	for _, item := range a {
-		c = append(c, item)
-	}
-	for _, item := range b {
-		c = append(c, item)
-	}
-
-	return c
-}
-
-// Difference takes two slices of string, say a and b, and returns a slice c
-// such that for all x exist in c -> x exist in a and x _not_ exist in b.
-func Difference(a, b []string) []string {
+func Intersection(a, b []string) (c []string) {
 	seen := make(map[string]bool)
 	for _, item := range b {
 		seen[item] = true
 	}
 
-	c := make([]string, 0)
+	for _, item := range a {
+		if _, ok := seen[item]; ok {
+			c = append(c, item)
+		}
+	}
+	return
+}
+
+// Difference takes two slices of string, say a and b, and returns a slice c
+// such that for all x exist in c -> x exist in a and x _not_ exist in b.
+func Difference(a, b []string) (c []string) {
+	seen := make(map[string]bool)
+	for _, item := range b {
+		seen[item] = true
+	}
+
 	for _, item := range a {
 		if _, ok := seen[item]; !ok {
 			c = append(c, item)
 		}
 	}
-	return c
+	return
 }
 
 // Filter takes a slice of tags and returns a new slice such that each tag
@@ -97,12 +100,10 @@ func Filter(tags []string, pattern string) []string {
 // and writes them to the destination repository iff they are not already
 // there, and they match pattern. Returns the tags already mirrored, and
 // an error, if any.
-func MirrorImage(sourceRepoName, destRepoName, imageName, pattern string, log logr.Logger) ([]string, error) {
-	ctx := context.Background()
-
+func MirrorImage(spec slipwayk8sfacebookcomv1.ImageMirrorSpec, ctx context.Context, log logr.Logger) ([]string, error) {
 	options := remote.WithAuthFromKeychain(authn.DefaultKeychain)
-	sourceName := sourceRepoName + imageName
-	destName := destRepoName + imageName
+	sourceName := spec.SourceRepository + spec.ImageName
+	destName := spec.DestRepository + spec.ImageName
 
 	sourceRepo, err := name.NewRepository(sourceName)
 	if err != nil {
@@ -118,18 +119,18 @@ func MirrorImage(sourceRepoName, destRepoName, imageName, pattern string, log lo
 	if err != nil {
 		return nil, errors.Wrap(err, "unable to ListWithContext")
 	}
+	log.Info("Source repository tags", "sourceTags", sourceTags)
 
 	destTags, err := remote.ListWithContext(ctx, destRepo, options)
 	if err != nil {
 		return nil, errors.Wrap(err, "unable to ListWithContext")
 	}
+	log.Info("Destination repository tags", "destTags", destTags)
 
-	filteredTags := Filter(sourceTags, pattern)
+	filteredTags := Filter(sourceTags, spec.Pattern)
 	mirroredTags := Intersection(filteredTags, destTags)
 	missingTags := Difference(filteredTags, destTags)
 
-	log.Info("Source repository tags", "sourceTags", sourceTags)
-	log.Info("Destination repository tags", "destTags", destTags)
 	log.Info("Filtered source repository tags", "filteredTags", filteredTags)
 	log.Info("Mirrored destination tags", "mirroredTags", mirroredTags)
 	log.Info("Missing destination tags", "missingTags", missingTags)
