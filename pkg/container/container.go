@@ -14,7 +14,7 @@ See the License for the spec.fic language governing permissions and
 limitations under the License.
 */
 
-package controllers
+package container
 
 import (
 	"context"
@@ -25,6 +25,7 @@ import (
 	"github.com/google/go-containerregistry/pkg/name"
 	"github.com/google/go-containerregistry/pkg/v1/remote"
 	"github.com/pkg/errors"
+
 	// This dependency was copied into the operator to avoid client-go
 	// dependency conflicts between flux and kubebuilder. This may or
 	// may not be the best solution to an unfortunately common problem.
@@ -120,16 +121,16 @@ func MirrorImage(ctx context.Context, spec slipwayk8sfacebookcomv1.ImageMirrorSp
 		return nil, errors.Wrap(err, "unable to NewRegistry")
 	}
 
-	destRepo, err := name.NewRepository(destName)
-	if err != nil {
-		return nil, errors.Wrap(err, "unable to NewRegistry")
-	}
-
 	sourceTags, err := remote.ListWithContext(ctx, sourceRepo, options)
 	if err != nil {
 		return nil, errors.Wrap(err, "unable to ListWithContext")
 	}
 	log.Info("Source repository tags", "sourceTags", sourceTags)
+
+	destRepo, err := name.NewRepository(destName)
+	if err != nil {
+		return nil, errors.Wrap(err, "unable to NewRegistry")
+	}
 
 	destTags, err := remote.ListWithContext(ctx, destRepo, options)
 	if err != nil {

@@ -3,7 +3,7 @@
 > A slipway is a large platform that slopes down into the sea, from which boats are put into the water.
 
 Slipway is a k8s operator which mirrors container images between registries.
-Users interact with the service by deploying k8s reources describing the
+Users interact with the service by deploying k8s resources describing the
 containers which should be mirrored, and the operator observes changes to
 these resources and takes action.
 

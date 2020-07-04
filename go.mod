@@ -2,6 +2,8 @@ module github.com/davidewatson/slipway
 
 go 1.13
 
+replace github.com/davidewatson/slipway/pkg/container v0.0.0 => ./pkg/container/
+
 require (
 	github.com/Masterminds/semver/v3 v3.1.0
 	github.com/go-logr/logr v0.1.0

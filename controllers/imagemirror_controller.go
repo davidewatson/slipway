@@ -26,6 +26,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	slipwayk8sfacebookcomv1 "github.com/davidewatson/slipway/api/v1"
+	"github.com/davidewatson/slipway/pkg/container"
 )
 
 // ImageMirrorReconciler reconciles a ImageMirror object
@@ -54,7 +55,7 @@ func (r *ImageMirrorReconciler) Reconcile(req ctrl.Request) (ctrl.Result, error)
 	}
 
 	// Mirror tags based on the users intent.
-	mirroredTags, err := MirrorImage(ctx, imageMirror.Spec, log)
+	mirroredTags, err := container.MirrorImage(ctx, imageMirror.Spec, log)
 	if err != nil {
 		return ctrl.Result{RequeueAfter: time.Minute}, err
 	}
