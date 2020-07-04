@@ -28,26 +28,27 @@ type ImageMirrorSpec struct {
 	// registry host, and registry organization (e.g. docker.io/dwat/) which
 	// will be used to pull images to mirror. NOTE: This must not include
 	// the container image name or any tags.
-	SourceRepository string `json:"source_repository,required"`
+	SourceRepo string `json:"sourceRepo,requred"`
 
 	// DestRepository is a URL resource as above, which is used to
 	// push mirrored container images.
-	DestRepository string `json:"dest_repository,required"`
+	DestRepo string `json:"destRepo,required"`
 
 	// ImageName is the name of the image without tag (e.g. cuda).
-	ImageName string `json:"image_name,required"`
+	ImageName string `json:"imageName,required"`
 
-	// Pattern is a regex matching the tags which should be mirrored. We
-	// follow Flux (who of course copied as well) because compatibility
-	// is nice for our users. Cf.
+	// Pattern matches the tags which should be mirrored, and supports
+	// serveral formats (semver:, glob:, regex:, etc.). Note these were
+	// copied from Flux for better interopability and ease of use. Cf.
 	// https://github.com/fluxcd/flux/blob/v1.19.0/pkg/policy/pattern.go
-	Pattern string `json:"tag_regex,omitempty"`
+	// If pattern is omitted then the operator will stop mirroring.
+	Pattern string `json:"pattern,omitempty"`
 }
 
 // ImageMirrorStatus defines the observed state of ImageMirror
 type ImageMirrorStatus struct {
 	// MirroredTags is a slice of tags which have already been mirrored.
-	MirroredTags []string `json:"mirrored_tags"`
+	MirroredTags []string `json:"mirroredTags"`
 }
 
 // +kubebuilder:object:root=true

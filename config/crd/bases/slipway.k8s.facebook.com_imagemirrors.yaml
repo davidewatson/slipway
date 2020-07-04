@@ -34,40 +34,42 @@ spec:
         spec:
           description: ImageMirrorSpec defines the desired state of ImageMirror
           properties:
-            dest_repository:
+            destRepo:
               description: DestRepository is a URL resource as above, which is used
                 to push mirrored container images.
               type: string
-            image_name:
+            imageName:
               description: ImageName is the name of the image without tag (e.g. cuda).
               type: string
-            source_repository:
+            pattern:
+              description: Pattern matches the tags which should be mirrored, and
+                supports serveral formats (semver:, glob:, regex:, etc.). Note these
+                were copied from Flux for better interopability and ease of use. Cf.
+                https://github.com/fluxcd/flux/blob/v1.19.0/pkg/policy/pattern.go
+                If pattern is omitted then the operator will stop mirroring.
+              type: string
+            sourceRepo:
               description: 'SourceRepository is a URL resource, including scheme (optional),
                 registry host, and registry organization (e.g. docker.io/dwat/) which
                 will be used to pull images to mirror. NOTE: This must not include
                 the container image name or any tags.'
               type: string
-            tag_regex:
-              description: Pattern is a regex matching the tags which should be mirrored.
-                We follow Flux (who of course copied as well) because compatibility
-                is nice for our users. Cf. https://github.com/fluxcd/flux/blob/v1.19.0/pkg/policy/pattern.go
-              type: string
           required:
-          - dest_repository
-          - image_name
-          - source_repository
+          - destRepo
+          - imageName
+          - sourceRepo
           type: object
         status:
           description: ImageMirrorStatus defines the observed state of ImageMirror
           properties:
-            mirrored_tags:
+            mirroredTags:
               description: MirroredTags is a slice of tags which have already been
                 mirrored.
               items:
                 type: string
               type: array
           required:
-          - mirrored_tags
+          - mirroredTags
           type: object
       type: object
   version: v1

@@ -21,6 +21,7 @@ import (
 
 	"github.com/go-logr/logr"
 	"github.com/google/go-containerregistry/pkg/authn"
+	"github.com/google/go-containerregistry/pkg/authn/k8schain"
 	"github.com/google/go-containerregistry/pkg/name"
 	"github.com/google/go-containerregistry/pkg/v1/remote"
 	"github.com/pkg/errors"
@@ -31,6 +32,15 @@ import (
 
 	slipwayk8sfacebookcomv1 "github.com/davidewatson/slipway/api/v1"
 )
+
+func init() {
+	// Override the default keychain used by this process to follow the
+	// Kubelet's keychain semantics.
+	kc, err := k8schain.NewInCluster(k8schain.Options{})
+	if err != nil {
+		authn.DefaultKeychain = kc
+	}
+}
 
 // Union takes two slices of string, say a and b, and returns a slice c
 // such that for all x exist in c -> x exist in a _or_ x exist in b.
@@ -46,7 +56,7 @@ func Union(a, b []string) (c []string) {
 			c = append(c, item)
 		}
 	}
-	return c
+	return
 }
 
 // Intersection takes two slices of string, say a and b, and returns a slice c
@@ -100,10 +110,10 @@ func Filter(tags []string, pattern string) []string {
 // and writes them to the destination repository iff they are not already
 // there, and they match pattern. Returns the tags already mirrored, and
 // an error, if any.
-func MirrorImage(spec slipwayk8sfacebookcomv1.ImageMirrorSpec, ctx context.Context, log logr.Logger) ([]string, error) {
+func MirrorImage(ctx context.Context, spec slipwayk8sfacebookcomv1.ImageMirrorSpec, log logr.Logger) ([]string, error) {
 	options := remote.WithAuthFromKeychain(authn.DefaultKeychain)
-	sourceName := spec.SourceRepository + spec.ImageName
-	destName := spec.DestRepository + spec.ImageName
+	sourceName := spec.SourceRepo + spec.ImageName
+	destName := spec.DestRepo + spec.ImageName
 
 	sourceRepo, err := name.NewRepository(sourceName)
 	if err != nil {

@@ -15,8 +15,8 @@ kind: ImageMirror
 metadata:
   name: centos
 spec:
-  sourceRepository: docker.io/
-  destRepository: dtr.thefacebook.com/dwat/
+  sourceRepo: docker.io/
+  destRepo: dtr.thefacebook.com/dwat/
   imageName: centos
   pattern: "semver: ~7"
 ```

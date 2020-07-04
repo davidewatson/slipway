@@ -17,11 +17,11 @@ func main() {
 
 	log := zap.New(zap.UseDevMode(true))
 
-	_, _ = slipwayclient.MirrorImage(v1.ImageMirrorSpec{
-		SourceRepository: *src,
-		DestRepository:   *dest,
-		ImageName:        "centos",
-		Pattern:          "glob: 8*",
+	_, _ = slipwayclient.MirrorImage(nil, v1.ImageMirrorSpec{
+		SourceRepo: *src,
+		DestRepo:   *dest,
+		ImageName:  "centos",
+		Pattern:    "glob: 8*",
 	},
-		nil, log)
+		log)
 }
