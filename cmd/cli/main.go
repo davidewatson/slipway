@@ -7,7 +7,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/log/zap"
 
 	v1 "github.com/davidewatson/slipway/api/v1"
-	"github.com/davidewatson/slipway/pkg/container"
+	"github.com/davidewatson/slipway/controllers"
 )
 
 func main() {
@@ -17,7 +17,7 @@ func main() {
 
 	log := zap.New(zap.UseDevMode(true))
 
-	_, _ = container.MirrorImage(nil, v1.ImageMirrorSpec{
+	_, _ = controllers.MirrorImage(nil, v1.ImageMirrorSpec{
 		SourceRepo: *src,
 		DestRepo:   *dest,
 		ImageName:  "centos",

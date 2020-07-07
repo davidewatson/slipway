@@ -14,7 +14,7 @@ See the License for the spec.fic language governing permissions and
 limitations under the License.
 */
 
-package container
+package controllers
 
 import (
 	"context"
