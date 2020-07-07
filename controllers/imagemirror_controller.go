@@ -35,8 +35,8 @@ type ImageMirrorReconciler struct {
 	Scheme *runtime.Scheme
 }
 
-// +kubebuilder:rbac:groups=slipway.k8s.facebook.com.k8s.facebook.com,resources=imagemirrors,verbs=get;list;watch;create;update;patch;delete
-// +kubebuilder:rbac:groups=slipway.k8s.facebook.com.k8s.facebook.com,resources=imagemirrors/status,verbs=get;update;patch
+// +kubebuilder:rbac:groups=slipway.k8s.facebook.com,resources=imagemirrors,verbs=get;list;watch;create;update;patch;delete
+// +kubebuilder:rbac:groups=slipway.k8s.facebook.com,resources=imagemirrors/status,verbs=get;update;patch
 
 func (r *ImageMirrorReconciler) Reconcile(req ctrl.Request) (ctrl.Result, error) {
 	var imageMirror slipwayk8sfacebookcomv1.ImageMirror

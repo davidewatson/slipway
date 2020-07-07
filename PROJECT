@@ -1,7 +1,7 @@
 domain: k8s.facebook.com
 repo: github.com/davidewatson/slipway
 resources:
-- group: slipway.k8s.facebook.com
+- group: slipway
   kind: ImageMirror
   version: v1
 version: "2"
