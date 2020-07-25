@@ -24,13 +24,13 @@ import (
 
 // ImageMirrorSpec defines the desired state of ImageMirror
 type ImageMirrorSpec struct {
-	// SourceRepository is a URL resource, including scheme (optional),
+	// SourceRepo is a URL resource, including scheme (optional),
 	// registry host, and registry organization (e.g. docker.io/dwat/) which
 	// will be used to pull images to mirror. NOTE: This must not include
 	// the container image name or any tags.
 	SourceRepo string `json:"sourceRepo,requred"`
 
-	// DestRepository is a URL resource as above, which is used to
+	// DestRepos is a URL resource as above, which is used to
 	// push mirrored container images.
 	DestRepo string `json:"destRepo,required"`
 
@@ -43,6 +43,14 @@ type ImageMirrorSpec struct {
 	// https://github.com/fluxcd/flux/blob/v1.19.0/pkg/policy/pattern.go
 	// If pattern is omitted then the operator will stop mirroring.
 	Pattern string `json:"pattern,omitempty"`
+
+	// SourceSecretName is name of the secret in the same namespace,
+	// containing a token to authenticate with the source repository.
+	SourceSecretName string `json:"sourceSecretName,omitempty"`
+
+	// DestRepoSecret is name of the secret in the same namespace,
+	// containing a token to authenticate with the destination repository.
+	DestSecretName string `json:"destSecretName,omitempty"`
 }
 
 // ImageMirrorStatus defines the observed state of ImageMirror

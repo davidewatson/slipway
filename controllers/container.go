@@ -107,21 +107,35 @@ func Filter(tags []string, pattern string) []string {
 	return passed
 }
 
+// GetOptions returns a slice of remote.Options including a keychain
+// for verifying the server, and a token to authenticate ourselves.
+func GetOptions(token string) (options []remote.Option) {
+	if token != "" {
+		options = append(options, remote.WithAuth(&authn.Bearer{Token: token}))
+	}
+	options = append(options, remote.WithAuthFromKeychain(authn.DefaultKeychain))
+
+	return
+}
+
 // MirrorImage lists all tags for the image from the source repository
 // and writes them to the destination repository iff they are not already
 // there, and they match pattern. Returns the tags already mirrored, and
 // an error, if any.
-func MirrorImage(ctx context.Context, spec slipwayk8sfacebookcomv1.ImageMirrorSpec, log logr.Logger) ([]string, error) {
-	options := remote.WithAuthFromKeychain(authn.DefaultKeychain)
-	sourceName := spec.SourceRepo + spec.ImageName
-	destName := spec.DestRepo + spec.ImageName
+func MirrorImage(ctx context.Context, imageMirror slipwayk8sfacebookcomv1.ImageMirror, log logr.Logger,
+	sourceToken, destToken string) ([]string, error) {
+
+	sourceOptions := GetOptions(sourceToken)
+	destOptions := GetOptions(destToken)
+	sourceName := imageMirror.Spec.SourceRepo + imageMirror.Spec.ImageName
+	destName := imageMirror.Spec.DestRepo + imageMirror.Spec.ImageName
 
 	sourceRepo, err := name.NewRepository(sourceName)
 	if err != nil {
 		return nil, errors.Wrap(err, "unable to NewRegistry")
 	}
 
-	sourceTags, err := remote.ListWithContext(ctx, sourceRepo, options)
+	sourceTags, err := remote.ListWithContext(ctx, sourceRepo, sourceOptions...)
 	if err != nil {
 		return nil, errors.Wrap(err, "unable to ListWithContext")
 	}
@@ -132,13 +146,13 @@ func MirrorImage(ctx context.Context, spec slipwayk8sfacebookcomv1.ImageMirrorSp
 		return nil, errors.Wrap(err, "unable to NewRegistry")
 	}
 
-	destTags, err := remote.ListWithContext(ctx, destRepo, options)
+	destTags, err := remote.ListWithContext(ctx, destRepo, destOptions...)
 	if err != nil {
 		return nil, errors.Wrap(err, "unable to ListWithContext")
 	}
 	log.Info("Destination repository tags", "destTags", destTags)
 
-	filteredTags := Filter(sourceTags, spec.Pattern)
+	filteredTags := Filter(sourceTags, imageMirror.Spec.Pattern)
 	mirroredTags := Intersection(filteredTags, destTags)
 	missingTags := Difference(filteredTags, destTags)
 
@@ -160,12 +174,12 @@ func MirrorImage(ctx context.Context, spec slipwayk8sfacebookcomv1.ImageMirrorSp
 			return mirroredTags, errors.Wrap(err, "unable to ParseReference")
 		}
 
-		img, err := remote.Image(sourceRef, options)
+		img, err := remote.Image(sourceRef, sourceOptions...)
 		if err != nil {
 			return mirroredTags, errors.Wrap(err, "unable to Image")
 		}
 
-		err = remote.Write(destRef, img, options)
+		err = remote.Write(destRef, img, destOptions...)
 		if err != nil {
 			return mirroredTags, errors.Wrap(err, "unable to Write")
 		}

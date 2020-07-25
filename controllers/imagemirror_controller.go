@@ -18,9 +18,11 @@ package controllers
 
 import (
 	"context"
+	"encoding/base64"
 	"time"
 
 	"github.com/go-logr/logr"
+	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -38,6 +40,7 @@ type ImageMirrorReconciler struct {
 // +kubebuilder:rbac:groups=slipway.k8s.facebook.com,resources=imagemirrors,verbs=get;list;watch;create;update;patch;delete
 // +kubebuilder:rbac:groups=slipway.k8s.facebook.com,resources=imagemirrors/status,verbs=get;update;patch
 
+// Reconcile is called when a resource we are watching may have changed.
 func (r *ImageMirrorReconciler) Reconcile(req ctrl.Request) (ctrl.Result, error) {
 	var imageMirror slipwayk8sfacebookcomv1.ImageMirror
 
@@ -53,8 +56,20 @@ func (r *ImageMirrorReconciler) Reconcile(req ctrl.Request) (ctrl.Result, error)
 		return ctrl.Result{}, client.IgnoreNotFound(err)
 	}
 
+	// Get credentials needed to mirror.
+	sourceToken, err := r.GetToken(ctx, imageMirror.ObjectMeta.Namespace, imageMirror.Spec.SourceSecretName)
+	if err != nil {
+		log.Error(err, "unable to GetToken for source")
+		return ctrl.Result{}, err
+	}
+	destToken, err := r.GetToken(ctx, imageMirror.ObjectMeta.Namespace, imageMirror.Spec.DestSecretName)
+	if err != nil {
+		log.Error(err, "unable to GetToken for dest")
+		return ctrl.Result{}, err
+	}
+
 	// Mirror tags based on the users intent.
-	mirroredTags, err := MirrorImage(ctx, imageMirror.Spec, log)
+	mirroredTags, err := MirrorImage(ctx, imageMirror, log, sourceToken, destToken)
 	if err != nil {
 		return ctrl.Result{RequeueAfter: time.Minute}, err
 	}
@@ -69,6 +84,23 @@ func (r *ImageMirrorReconciler) Reconcile(req ctrl.Request) (ctrl.Result, error)
 	return ctrl.Result{}, nil
 }
 
+// GetToken returns the token contained within the secret named name in namespace.
+func (r *ImageMirrorReconciler) GetToken(ctx context.Context, namespace, name string) (string, error) {
+	// Get the resource using a typed object.
+	secret := &corev1.Secret{}
+	if err := r.Get(ctx, client.ObjectKey{Namespace: namespace, Name: name}, secret); err != nil {
+		return "", err
+	}
+
+	data, err := base64.StdEncoding.DecodeString(string(secret.Data["token"]))
+	if err != nil {
+		return "", err
+	}
+
+	return string(data), nil
+}
+
+// SetupWithManager registers controller with manager and configures shared informer.
 func (r *ImageMirrorReconciler) SetupWithManager(mgr ctrl.Manager) error {
 	return ctrl.NewControllerManagedBy(mgr).
 		For(&slipwayk8sfacebookcomv1.ImageMirror{}).
