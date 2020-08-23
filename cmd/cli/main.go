@@ -20,10 +20,10 @@ func main() {
 
 	log := zap.New(zap.UseDevMode(true))
 
-	_, _ = controllers.MirrorImage(ctx, v1.ImageMirror{Spec: v1.ImageMirrorSpec{
+	_, _ = controllers.MirrorImages(ctx, log, v1.ImageMirror{Spec: v1.ImageMirrorSpec{
 		SourceRepo: *src,
 		DestRepo:   *dest,
 		ImageName:  "centos",
 		Pattern:    "glob: 8*",
-	}}, log, "", "")
+	}}, controllers.SecretData{}, controllers.SecretData{})
 }

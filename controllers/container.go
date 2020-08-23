@@ -38,7 +38,7 @@ func init() {
 	// Override the default keychain used by this process to follow the
 	// Kubelet's keychain semantics.
 	kc, err := k8schain.NewInCluster(k8schain.Options{})
-	if err != nil {
+	if err == nil {
 		authn.DefaultKeychain = kc
 	}
 }
@@ -107,28 +107,60 @@ func Filter(tags []string, pattern string) []string {
 	return passed
 }
 
-// GetOptions returns a slice of remote.Options including a keychain
-// for verifying the server, and a token to authenticate ourselves.
-func GetOptions(token string) (options []remote.Option) {
-	if token != "" {
-		options = append(options, remote.WithAuth(&authn.Bearer{Token: token}))
+// SecretData is used to pass credentials internally.
+type SecretData struct {
+	Username string
+	Password string
+}
+
+// GetOptions returns a slice of remote.Options including the docker keychain,
+// and iff they exist in the Secret map data, other credentials.
+func GetOptions(data SecretData) (options []remote.Option) {
+	if data.Username != "" && data.Password != "" {
+		options = append(options, remote.WithAuth(&authn.Basic{
+			Username: data.Username,
+			Password: data.Password,
+		}))
 	}
+
 	options = append(options, remote.WithAuthFromKeychain(authn.DefaultKeychain))
+	return
+}
+
+// GetNormalizedName returns a "fully qualified image reference". That is, a
+// name of the form <registry-domain>/<organization>/<image-name>.
+func GetNormalizedName(registryName, imageName string) (normalName string) {
+	if registryName[len(registryName)-1] != '/' {
+		normalName = registryName + "/" + imageName
+	} else {
+		normalName = registryName + imageName
+	}
 
 	return
 }
 
-// MirrorImage lists all tags for the image from the source repository
-// and writes them to the destination repository iff they are not already
-// there, and they match pattern. Returns the tags already mirrored, and
-// an error, if any.
-func MirrorImage(ctx context.Context, imageMirror slipwayk8sfacebookcomv1.ImageMirror, log logr.Logger,
-	sourceToken, destToken string) ([]string, error) {
+// MirrorImagesResult contains information about the tags discovered or
+// calculated during the image mirroring process.
+type MirrorImagesResult struct {
+	sourceTags   []string // tags listed from source image repository
+	destTags     []string // tags listed from destination image repository
+	filteredTags []string // tags which match pattern from sourceTags
+	mirroredTags []string // tags which are in the source and destination repositories
+	missingTags  []string // tags which are in the source, but not destination
+}
 
-	sourceOptions := GetOptions(sourceToken)
-	destOptions := GetOptions(destToken)
-	sourceName := imageMirror.Spec.SourceRepo + imageMirror.Spec.ImageName
-	destName := imageMirror.Spec.DestRepo + imageMirror.Spec.ImageName
+// MirrorImages lists all tags for the image from the source repository and
+// writes them to the destination repository iff they are not already there,
+// and they match pattern. Returns the tags already mirrored, and an error, if
+// any.
+func MirrorImages(ctx context.Context, log logr.Logger,
+	imageMirror slipwayk8sfacebookcomv1.ImageMirror,
+	sourceSecretData, destSecretData SecretData) ([]string, error) {
+
+	sourceOptions := GetOptions(sourceSecretData)
+	destOptions := GetOptions(destSecretData)
+	sourceName := GetNormalizedName(imageMirror.Spec.SourceRepo, imageMirror.Spec.ImageName)
+	destName := GetNormalizedName(imageMirror.Spec.DestRepo, imageMirror.Spec.ImageName)
 
 	sourceRepo, err := name.NewRepository(sourceName)
 	if err != nil {

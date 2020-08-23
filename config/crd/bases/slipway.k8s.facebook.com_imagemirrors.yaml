@@ -35,8 +35,12 @@ spec:
           description: ImageMirrorSpec defines the desired state of ImageMirror
           properties:
             destRepo:
-              description: DestRepository is a URL resource as above, which is used
-                to push mirrored container images.
+              description: DestRepos is a URL resource as above, which is used to
+                push mirrored container images.
+              type: string
+            destSecretName:
+              description: DestSecretName is name of the secret in the same namespace,
+                containing a token to authenticate with the destination repository.
               type: string
             imageName:
               description: ImageName is the name of the image without tag (e.g. cuda).
@@ -49,10 +53,14 @@ spec:
                 If pattern is omitted then the operator will stop mirroring.
               type: string
             sourceRepo:
-              description: 'SourceRepository is a URL resource, including scheme (optional),
+              description: 'SourceRepo is a URL resource, including scheme (optional),
                 registry host, and registry organization (e.g. docker.io/dwat/) which
                 will be used to pull images to mirror. NOTE: This must not include
                 the container image name or any tags.'
+              type: string
+            sourceSecretName:
+              description: SourceSecretName is name of the secret in the same namespace,
+                containing a token to authenticate with the source repository.
               type: string
           required:
           - destRepo

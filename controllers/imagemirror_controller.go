@@ -39,6 +39,7 @@ type ImageMirrorReconciler struct {
 
 // +kubebuilder:rbac:groups=slipway.k8s.facebook.com,resources=imagemirrors,verbs=get;list;watch;create;update;patch;delete
 // +kubebuilder:rbac:groups=slipway.k8s.facebook.com,resources=imagemirrors/status,verbs=get;update;patch
+// +kubebuilder:rbac:groups=core,resources=secrets,verbs=get;list;watch
 
 // Reconcile is called when a resource we are watching may have changed.
 func (r *ImageMirrorReconciler) Reconcile(req ctrl.Request) (ctrl.Result, error) {
@@ -56,25 +57,33 @@ func (r *ImageMirrorReconciler) Reconcile(req ctrl.Request) (ctrl.Result, error)
 		return ctrl.Result{}, client.IgnoreNotFound(err)
 	}
 
-	// Get credentials needed to mirror.
-	sourceToken, err := r.GetToken(ctx, imageMirror.ObjectMeta.Namespace, imageMirror.Spec.SourceSecretName)
+	// Get credentials needed to mirror. We unconditionally read these so that
+	// we always have the latest copy, relying on the shared informer cache to
+	// avoid unnecessary reads.
+	sourceSecretData, err := r.GetSecretData(ctx, imageMirror.ObjectMeta.Namespace, imageMirror.Spec.SourceSecretName)
 	if err != nil {
-		log.Error(err, "unable to GetToken for source")
+		log.Error(err, "unable to GetSecretData for source")
 		return ctrl.Result{}, err
 	}
-	destToken, err := r.GetToken(ctx, imageMirror.ObjectMeta.Namespace, imageMirror.Spec.DestSecretName)
+	log.Info("Got source secret", "username", sourceSecretData.Username)
+
+	destSecretData, err := r.GetSecretData(ctx, imageMirror.ObjectMeta.Namespace, imageMirror.Spec.DestSecretName)
 	if err != nil {
-		log.Error(err, "unable to GetToken for dest")
+		log.Error(err, "unable to GetSecretData for dest")
 		return ctrl.Result{}, err
 	}
+	log.Info("Got destination secret", "username", destSecretData.Username)
 
 	// Mirror tags based on the users intent.
-	mirroredTags, err := MirrorImage(ctx, imageMirror, log, sourceToken, destToken)
+	mirroredTags, err := MirrorImages(ctx, log, imageMirror, sourceSecretData, destSecretData)
 	if err != nil {
 		return ctrl.Result{RequeueAfter: time.Minute}, err
 	}
+	log.Info("Finished mirroring images")
 
-	// Update status with the current state.
+	// Update status with the current state. Notice that we could have set this
+	// within MirrorImages(), but we want crystal clear on when and where state
+	// changes.
 	imageMirror.Status.MirroredTags = mirroredTags
 	if err := r.Status().Update(ctx, &imageMirror); err != nil {
 		log.Error(err, "unable to update ImageMirror status")
@@ -84,20 +93,32 @@ func (r *ImageMirrorReconciler) Reconcile(req ctrl.Request) (ctrl.Result, error)
 	return ctrl.Result{}, nil
 }
 
-// GetToken returns the token contained within the secret named name in namespace.
-func (r *ImageMirrorReconciler) GetToken(ctx context.Context, namespace, name string) (string, error) {
+// GetSecretData returns basic credentials from the secret named name in
+// namespace, and an err, if any.
+func (r *ImageMirrorReconciler) GetSecretData(ctx context.Context, namespace, name string) (data SecretData, err error) {
+	if name == "" {
+		return data, nil
+	}
+
 	// Get the resource using a typed object.
 	secret := &corev1.Secret{}
 	if err := r.Get(ctx, client.ObjectKey{Namespace: namespace, Name: name}, secret); err != nil {
-		return "", err
+		return data, err
 	}
 
-	data, err := base64.StdEncoding.DecodeString(string(secret.Data["token"]))
-	if err != nil {
-		return "", err
+	if value, ok := secret.Data["username"]; ok {
+		if decoded, err := base64.StdEncoding.DecodeString(string(value)); err == nil {
+			data.Username = string(decoded)
+		}
 	}
 
-	return string(data), nil
+	if value, ok := secret.Data["password"]; ok {
+		if decoded, err := base64.StdEncoding.DecodeString(string(value)); err != nil {
+			data.Password = string(decoded)
+		}
+	}
+
+	return data, nil
 }
 
 // SetupWithManager registers controller with manager and configures shared informer.

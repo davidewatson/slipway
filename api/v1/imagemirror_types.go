@@ -48,7 +48,7 @@ type ImageMirrorSpec struct {
 	// containing a token to authenticate with the source repository.
 	SourceSecretName string `json:"sourceSecretName,omitempty"`
 
-	// DestRepoSecret is name of the secret in the same namespace,
+	// DestSecretName is name of the secret in the same namespace,
 	// containing a token to authenticate with the destination repository.
 	DestSecretName string `json:"destSecretName,omitempty"`
 }

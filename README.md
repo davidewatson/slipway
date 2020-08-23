@@ -1,6 +1,7 @@
 # slipway
 
-> A slipway is a large platform that slopes down into the sea, from which boats are put into the water.
+> A slipway is a large platform that slopes down into the sea, from which boats
+> are put into the water.
 
 Slipway is a k8s operator which mirrors container images between registries.
 Users interact with the service by deploying k8s resources describing the
@@ -9,17 +10,25 @@ these resources and takes action.
 
 # tl;dr
 
-```yaml
+```bash
+cat << EOF > imagemirror.yaml
 apiVersion: slipway.k8s.facebook.com/v1
 kind: ImageMirror
 metadata:
   name: centos
 spec:
-  sourceRepo: docker.io/
-  destRepo: dtr.thefacebook.com/dwat/
+  sourceRepo: docker.io
+  destRepo: dtr.thefacebook.com/dwat
   imageName: centos
   pattern: "semver: ~7"
+EOF
+
+kubectl apply -f imagemirror.yaml
 ```
+
+# How it works
+
+
 
 # Developer notes
 
@@ -108,7 +117,7 @@ Note that the `kind load` above is only necessary because our dtr docker images 
 And finally test it:
 
 ```bash
-k apply -f config/samples/slipway.k8s.facebook.com_v1_imagemirror.yaml 
+k apply -f config/samples/slipway.k8s.facebook.com_v1_imagemirror.yaml
 k describe imagemirror
 docker pull dtr.thefacebook.com/dwat/centos:7.8.2003
 ```
