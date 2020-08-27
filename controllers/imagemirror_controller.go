@@ -63,21 +63,21 @@ func (r *ImageMirrorReconciler) Reconcile(req ctrl.Request) (ctrl.Result, error)
 	sourceSecretData, err := r.GetSecretData(ctx, imageMirror.ObjectMeta.Namespace, imageMirror.Spec.SourceSecretName)
 	if err != nil {
 		log.Error(err, "unable to GetSecretData for source")
-		return ctrl.Result{}, err
+		return ctrl.Result{RequeueAfter: time.Minute}, nil
 	}
 	log.Info("Got source secret", "username", sourceSecretData.Username)
 
 	destSecretData, err := r.GetSecretData(ctx, imageMirror.ObjectMeta.Namespace, imageMirror.Spec.DestSecretName)
 	if err != nil {
 		log.Error(err, "unable to GetSecretData for dest")
-		return ctrl.Result{}, err
+		return ctrl.Result{RequeueAfter: time.Minute}, nil
 	}
 	log.Info("Got destination secret", "username", destSecretData.Username)
 
 	// Mirror tags based on the users intent.
 	mirroredTags, err := MirrorImages(ctx, log, imageMirror, sourceSecretData, destSecretData)
 	if err != nil {
-		return ctrl.Result{RequeueAfter: time.Minute}, err
+		return ctrl.Result{RequeueAfter: time.Minute}, nil
 	}
 	log.Info("Finished mirroring images")
 

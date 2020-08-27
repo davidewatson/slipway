@@ -139,9 +139,13 @@ func GetNormalizedName(registryName, imageName string) (normalName string) {
 	return
 }
 
-// MirrorImagesResult contains information about the tags discovered or
+// MirrorImagesInput is
+type MirrorImagesInput struct {
+}
+
+// MirrorImagesOutput contains information about the tags discovered or
 // calculated during the image mirroring process.
-type MirrorImagesResult struct {
+type MirrorImagesOutput struct {
 	sourceTags   []string // tags listed from source image repository
 	destTags     []string // tags listed from destination image repository
 	filteredTags []string // tags which match pattern from sourceTags
