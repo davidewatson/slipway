@@ -74,7 +74,7 @@ func (r *ImageMirrorReconciler) Reconcile(req ctrl.Request) (ctrl.Result, error)
 	log.Info("Got destination secret", "username", destSecretData.Username)
 
 	// Mirror tags based on the users intent.
-	out, err := MirrorImages(ctx, log, imageMirror, sourceSecretData, destSecretData)
+	mirroredTags, err := MirrorImages(ctx, log, imageMirror, sourceSecretData, destSecretData)
 	if err != nil {
 		log.Error(err, "unable to MirrorImages")
 		return ctrl.Result{RequeueAfter: time.Minute}, err
@@ -82,7 +82,7 @@ func (r *ImageMirrorReconciler) Reconcile(req ctrl.Request) (ctrl.Result, error)
 	log.Info("Finished mirroring images")
 
 	// Update status with the current state.
-	imageMirror.Status.MirroredTags = out.MirroredTags
+	imageMirror.Status.MirroredTags = mirroredTags
 	if err := r.Status().Update(ctx, &imageMirror); err != nil {
 		log.Error(err, "unable to update ImageMirror status")
 		return ctrl.Result{}, err

@@ -121,12 +121,12 @@ func GetOptions(data SecretData) (options []remote.Option) {
 			Username: data.Username,
 			Password: data.Password,
 		}))
-
 		return
 	}
 
 	// Rethink this. Without the return above we get this:
 	// 2020-09-02T03:59:52.878Z	ERROR	controller-runtime.controller	Reconciler error	{"controller": "imagemirror", "request": "dwat/centos", "error": "unable to ListWithContext dest: GET https://index.docker.io/v2/dwat/centos/tags/list?n=1000: UNAUTHORIZED: authentication required; [map[Action:pull Class: Name:dwat/centos Type:repository]]", "errorVerbose": "GET https://index.docker.io/v2/dwat/centos/tags/list?n=1000: UNAUTHORIZED: authentication required; [map[Action:pull Class: Name:dwat/centos Type:repository]]\nunable to ListWithContext dest\ngithub.com/davidewatson/slipway/controllers.MirrorImages\n\t/workspace/controllers/container.go:187\ngithub.com/davidewatson/slipway/controllers.(*ImageMirrorReconciler).Reconcile\n\t/workspace/controllers/imagemirror_controller.go:77\nsigs.k8s.io/controller-runtime/pkg/internal/controller.(*Controller).reconcileHandler\n\t/go/pkg/mod/sigs.k8s.io/controller-runtime@v0.5.0/pkg/internal/controller/controller.go:256\nsigs.k8s.io/controller-runtime/pkg/internal/controller.(*Controller).processNextWorkItem\n\t/go/pkg/mod/sigs.k8s.io/controller-runtime@v0.5.0/pkg/internal/controller/controller.go:232\nsigs.k8s.io/controller-runtime/pkg/internal/controller.(*Controller).worker\n\t/go/pkg/mod/sigs.k8s.io/controller-runtime@v0.5.0/pkg/internal/controller/controller.go:211\nk8s.io/apimachinery/pkg/util/wait.JitterUntil.func1\n\t/go/pkg/mod/k8s.io/apimachinery@v0.17.4/pkg/util/wait/wait.go:152\nk8s.io/apimachinery/pkg/util/wait.JitterUntil\n\t/go/pkg/mod/k8s.io/apimachinery@v0.17.4/pkg/util/wait/wait.go:153\nk8s.io/apimachinery/pkg/util/wait.Until\n\t/go/pkg/mod/k8s.io/apimachinery@v0.17.4/pkg/util/wait/wait.go:88\nruntime.goexit\n\t/usr/local/go/src/runtime/asm_amd64.s:1357"}
+
 	options = append(options, remote.WithAuthFromKeychain(authn.DefaultKeychain))
 	return
 }
@@ -143,27 +143,13 @@ func GetNormalizedName(registryName, imageName string) (normalName string) {
 	return
 }
 
-// MirrorImagesInput is
-type MirrorImagesInput struct {
-}
-
-// MirrorImagesOutput contains information about the tags discovered or
-// calculated during the image mirroring process.
-type MirrorImagesOutput struct {
-	SourceTags   []string // tags listed from source image repository
-	DestTags     []string // tags listed from destination image repository
-	FilteredTags []string // tags which match pattern from sourceTags
-	MirroredTags []string // tags which are in the source and destination repositories
-	MissingTags  []string // tags which are in the source, but not destination
-}
-
 // MirrorImages lists all tags for the image from the source repository and
 // writes them to the destination repository iff they are not already there,
 // and they match pattern. Returns the tags already mirrored, and an error, if
 // any.
 func MirrorImages(ctx context.Context, log logr.Logger,
 	imageMirror slipwayk8sfacebookcomv1.ImageMirror,
-	sourceSecretData, destSecretData SecretData) (out MirrorImagesOutput, err error) {
+	sourceSecretData, destSecretData SecretData) ([]string, error) {
 
 	sourceOptions := GetOptions(sourceSecretData)
 	destOptions := GetOptions(destSecretData)
@@ -172,59 +158,58 @@ func MirrorImages(ctx context.Context, log logr.Logger,
 
 	sourceRepo, err := name.NewRepository(sourceName)
 	if err != nil {
-		return out, errors.Wrap(err, "unable to NewRegistry source")
+		return nil, errors.Wrap(err, "unable to NewRegistry source")
 	}
 
 	sourceTags, err := remote.ListWithContext(ctx, sourceRepo, sourceOptions...)
 	if err != nil {
-		return out, errors.Wrap(err, "unable to ListWithContext source")
+		return nil, errors.Wrap(err, "unable to ListWithContext source")
 	}
 	log.Info("Source repository tags", "sourceTags", sourceTags)
 
 	destRepo, err := name.NewRepository(destName)
 	if err != nil {
-		return out, errors.Wrap(err, "unable to NewRegistry dest")
+		return nil, errors.Wrap(err, "unable to NewRegistry dest")
 	}
 
 	destTags, err := remote.ListWithContext(ctx, destRepo, destOptions...)
 	if err != nil {
-		return out, errors.Wrap(err, "unable to ListWithContext dest")
+		return nil, errors.Wrap(err, "unable to ListWithContext dest")
 	}
 	log.Info("Destination repository tags", "destTags", destTags)
 
-	out.FilteredTags = Filter(sourceTags, imageMirror.Spec.Pattern)
-	out.MirroredTags = Intersection(out.FilteredTags, out.DestTags)
-	out.MissingTags = Difference(out.FilteredTags, out.DestTags)
+	filteredTags := Filter(sourceTags, imageMirror.Spec.Pattern)
+	mirroredTags := Intersection(filteredTags, destTags)
+	missingTags := Difference(filteredTags, destTags)
 
-	log.Info("Filtered source repository tags", "filteredTags", out.FilteredTags)
-	log.Info("Mirrored destination tags", "mirroredTags", out.MirroredTags)
-	log.Info("Missing destination tags", "missingTags", out.MissingTags)
+	log.Info("Filtered source repository tags", "filteredTags", filteredTags)
+	log.Info("Mirrored destination tags", "mirroredTags", mirroredTags)
+	log.Info("Missing destination tags", "missingTags", missingTags)
 
-	for _, tag := range out.MissingTags {
+	for _, tag := range missingTags {
 		sourceNameWithTag := sourceName + ":" + tag
 		destNameWithTag := destName + ":" + tag
 
 		sourceRef, err := name.ParseReference(sourceNameWithTag)
 		if err != nil {
-			return out, errors.Wrap(err, "unable to ParseReference source")
+			return mirroredTags, errors.Wrap(err, "unable to ParseReference source")
 		}
 
 		destRef, err := name.ParseReference(destNameWithTag)
 		if err != nil {
-			return out, errors.Wrap(err, "unable to ParseReference dest")
+			return mirroredTags, errors.Wrap(err, "unable to ParseReference dest")
 		}
 
 		img, err := remote.Image(sourceRef, sourceOptions...)
 		if err != nil {
-			return out, errors.Wrap(err, "unable to Image")
+			return mirroredTags, errors.Wrap(err, "unable to Image")
 		}
 
 		err = remote.Write(destRef, img, destOptions...)
 		if err != nil {
-			return out, errors.Wrap(err, "unable to Write")
+			return mirroredTags, errors.Wrap(err, "unable to Write")
 		}
 	}
 
-	out.MirroredTags = Union(out.MirroredTags, out.MissingTags)
-	return out, nil
+	return Union(mirroredTags, missingTags), nil
 }
