@@ -60,6 +60,7 @@ type ImageMirrorStatus struct {
 }
 
 // +kubebuilder:object:root=true
+// +kubebuilder:subresource:status
 
 // ImageMirror is the Schema for the imagemirrors API
 type ImageMirror struct {

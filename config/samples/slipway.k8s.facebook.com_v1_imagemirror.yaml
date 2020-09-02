@@ -2,6 +2,7 @@ apiVersion: slipway.k8s.facebook.com/v1
 kind: ImageMirror
 metadata:
   name: centos
+  namespace: dwat
 spec:
   sourceRepo: docker.io
   #destRepo: dtr.thefacebook.com/dwat/

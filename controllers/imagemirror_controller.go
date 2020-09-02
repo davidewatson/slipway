@@ -18,7 +18,6 @@ package controllers
 
 import (
 	"context"
-	"encoding/base64"
 	"time"
 
 	"github.com/go-logr/logr"
@@ -63,28 +62,27 @@ func (r *ImageMirrorReconciler) Reconcile(req ctrl.Request) (ctrl.Result, error)
 	sourceSecretData, err := r.GetSecretData(ctx, imageMirror.ObjectMeta.Namespace, imageMirror.Spec.SourceSecretName)
 	if err != nil {
 		log.Error(err, "unable to GetSecretData for source")
-		return ctrl.Result{RequeueAfter: time.Minute}, nil
+		return ctrl.Result{RequeueAfter: time.Minute}, err
 	}
 	log.Info("Got source secret", "username", sourceSecretData.Username)
 
 	destSecretData, err := r.GetSecretData(ctx, imageMirror.ObjectMeta.Namespace, imageMirror.Spec.DestSecretName)
 	if err != nil {
 		log.Error(err, "unable to GetSecretData for dest")
-		return ctrl.Result{RequeueAfter: time.Minute}, nil
+		return ctrl.Result{RequeueAfter: time.Minute}, err
 	}
 	log.Info("Got destination secret", "username", destSecretData.Username)
 
 	// Mirror tags based on the users intent.
-	mirroredTags, err := MirrorImages(ctx, log, imageMirror, sourceSecretData, destSecretData)
+	out, err := MirrorImages(ctx, log, imageMirror, sourceSecretData, destSecretData)
 	if err != nil {
-		return ctrl.Result{RequeueAfter: time.Minute}, nil
+		log.Error(err, "unable to MirrorImages")
+		return ctrl.Result{RequeueAfter: time.Minute}, err
 	}
 	log.Info("Finished mirroring images")
 
-	// Update status with the current state. Notice that we could have set this
-	// within MirrorImages(), but we want crystal clear on when and where state
-	// changes.
-	imageMirror.Status.MirroredTags = mirroredTags
+	// Update status with the current state.
+	imageMirror.Status.MirroredTags = out.MirroredTags
 	if err := r.Status().Update(ctx, &imageMirror); err != nil {
 		log.Error(err, "unable to update ImageMirror status")
 		return ctrl.Result{}, err
@@ -107,15 +105,11 @@ func (r *ImageMirrorReconciler) GetSecretData(ctx context.Context, namespace, na
 	}
 
 	if value, ok := secret.Data["username"]; ok {
-		if decoded, err := base64.StdEncoding.DecodeString(string(value)); err == nil {
-			data.Username = string(decoded)
-		}
+		data.Username = string(value)
 	}
 
 	if value, ok := secret.Data["password"]; ok {
-		if decoded, err := base64.StdEncoding.DecodeString(string(value)); err != nil {
-			data.Password = string(decoded)
-		}
+		data.Password = string(value)
 	}
 
 	return data, nil
