@@ -113,19 +113,15 @@ type SecretData struct {
 	Password string
 }
 
-// GetOptions returns a slice of remote.Options including the docker keychain,
+// GetRemoteOptions returns a slice of remote.Options including the docker keychain,
 // and iff they exist in the Secret map data, other credentials.
-func GetOptions(data SecretData) (options []remote.Option) {
+func GetRemoteOptions(data SecretData) (options []remote.Option) {
 	if data.Username != "" && data.Password != "" {
 		options = append(options, remote.WithAuth(&authn.Basic{
 			Username: data.Username,
 			Password: data.Password,
 		}))
-		return
 	}
-
-	// Rethink this. Without the return above we get this:
-	// 2020-09-02T03:59:52.878Z	ERROR	controller-runtime.controller	Reconciler error	{"controller": "imagemirror", "request": "dwat/centos", "error": "unable to ListWithContext dest: GET https://index.docker.io/v2/dwat/centos/tags/list?n=1000: UNAUTHORIZED: authentication required; [map[Action:pull Class: Name:dwat/centos Type:repository]]", "errorVerbose": "GET https://index.docker.io/v2/dwat/centos/tags/list?n=1000: UNAUTHORIZED: authentication required; [map[Action:pull Class: Name:dwat/centos Type:repository]]\nunable to ListWithContext dest\ngithub.com/davidewatson/slipway/controllers.MirrorImages\n\t/workspace/controllers/container.go:187\ngithub.com/davidewatson/slipway/controllers.(*ImageMirrorReconciler).Reconcile\n\t/workspace/controllers/imagemirror_controller.go:77\nsigs.k8s.io/controller-runtime/pkg/internal/controller.(*Controller).reconcileHandler\n\t/go/pkg/mod/sigs.k8s.io/controller-runtime@v0.5.0/pkg/internal/controller/controller.go:256\nsigs.k8s.io/controller-runtime/pkg/internal/controller.(*Controller).processNextWorkItem\n\t/go/pkg/mod/sigs.k8s.io/controller-runtime@v0.5.0/pkg/internal/controller/controller.go:232\nsigs.k8s.io/controller-runtime/pkg/internal/controller.(*Controller).worker\n\t/go/pkg/mod/sigs.k8s.io/controller-runtime@v0.5.0/pkg/internal/controller/controller.go:211\nk8s.io/apimachinery/pkg/util/wait.JitterUntil.func1\n\t/go/pkg/mod/k8s.io/apimachinery@v0.17.4/pkg/util/wait/wait.go:152\nk8s.io/apimachinery/pkg/util/wait.JitterUntil\n\t/go/pkg/mod/k8s.io/apimachinery@v0.17.4/pkg/util/wait/wait.go:153\nk8s.io/apimachinery/pkg/util/wait.Until\n\t/go/pkg/mod/k8s.io/apimachinery@v0.17.4/pkg/util/wait/wait.go:88\nruntime.goexit\n\t/usr/local/go/src/runtime/asm_amd64.s:1357"}
 
 	options = append(options, remote.WithAuthFromKeychain(authn.DefaultKeychain))
 	return
@@ -143,6 +139,37 @@ func GetNormalizedName(registryName, imageName string) (normalName string) {
 	return
 }
 
+// ListImageTags lists tags for the imageName at repoName
+func ListImageTags(ctx context.Context, repoName, imageName string, secretData SecretData) (string, []string, error) {
+	options := GetRemoteOptions(secretData)
+	normalName := GetNormalizedName(repoName, imageName)
+
+	repo, err := name.NewRepository(normalName)
+	if err != nil {
+		return "", nil, errors.Wrap(err, "unable to NewRegistry")
+	}
+
+	tags, err := remote.ListWithContext(ctx, repo, options...)
+	if err != nil {
+		return "", nil, errors.Wrap(err, "unable to ListWithContext")
+	}
+
+	return normalName, tags, nil
+}
+
+// MirrorImagesOptions are options for MirrorImages()
+type MirrorImagesOptions struct {
+	ctx context.Context
+	log logr.Logger
+
+	SourceRepo       string
+	DestRepo         string
+	ImageName        string
+	Pattern          string
+	sourceSecretData SecretData
+	destSecretData   SecretData
+}
+
 // MirrorImages lists all tags for the image from the source repository and
 // writes them to the destination repository iff they are not already there,
 // and they match pattern. Returns the tags already mirrored, and an error, if
@@ -151,32 +178,17 @@ func MirrorImages(ctx context.Context, log logr.Logger,
 	imageMirror slipwayk8sfacebookcomv1.ImageMirror,
 	sourceSecretData, destSecretData SecretData) ([]string, error) {
 
-	sourceOptions := GetOptions(sourceSecretData)
-	destOptions := GetOptions(destSecretData)
-	sourceName := GetNormalizedName(imageMirror.Spec.SourceRepo, imageMirror.Spec.ImageName)
-	destName := GetNormalizedName(imageMirror.Spec.DestRepo, imageMirror.Spec.ImageName)
-
-	sourceRepo, err := name.NewRepository(sourceName)
+	sourceName, sourceTags, err := ListImageTags(ctx, imageMirror.Spec.SourceRepo, imageMirror.Spec.ImageName, sourceSecretData)
 	if err != nil {
-		return nil, errors.Wrap(err, "unable to NewRegistry source")
-	}
-
-	sourceTags, err := remote.ListWithContext(ctx, sourceRepo, sourceOptions...)
-	if err != nil {
-		return nil, errors.Wrap(err, "unable to ListWithContext source")
+		return nil, errors.Wrap(err, "unable to ListImageTags source")
 	}
 	log.Info("Source repository tags", "sourceTags", sourceTags)
 
-	destRepo, err := name.NewRepository(destName)
+	destName, destTags, err := ListImageTags(ctx, imageMirror.Spec.DestRepo, imageMirror.Spec.ImageName, destSecretData)
 	if err != nil {
-		return nil, errors.Wrap(err, "unable to NewRegistry dest")
+		return nil, errors.Wrap(err, "unable to ListImageTags dest")
 	}
-
-	destTags, err := remote.ListWithContext(ctx, destRepo, destOptions...)
-	if err != nil {
-		return nil, errors.Wrap(err, "unable to ListWithContext dest")
-	}
-	log.Info("Destination repository tags", "destTags", destTags)
+	log.Info("Dest repository tags", "destTags", destTags)
 
 	filteredTags := Filter(sourceTags, imageMirror.Spec.Pattern)
 	mirroredTags := Intersection(filteredTags, destTags)
@@ -200,12 +212,12 @@ func MirrorImages(ctx context.Context, log logr.Logger,
 			return mirroredTags, errors.Wrap(err, "unable to ParseReference dest")
 		}
 
-		img, err := remote.Image(sourceRef, sourceOptions...)
+		img, err := remote.Image(sourceRef, GetRemoteOptions(sourceSecretData)...)
 		if err != nil {
 			return mirroredTags, errors.Wrap(err, "unable to Image")
 		}
 
-		err = remote.Write(destRef, img, destOptions...)
+		err = remote.Write(destRef, img, GetRemoteOptions(destSecretData)...)
 		if err != nil {
 			return mirroredTags, errors.Wrap(err, "unable to Write")
 		}
