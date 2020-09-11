@@ -121,6 +121,7 @@ func GetRemoteOptions(data SecretData) (options []remote.Option) {
 			Username: data.Username,
 			Password: data.Password,
 		}))
+		return
 	}
 
 	options = append(options, remote.WithAuthFromKeychain(authn.DefaultKeychain))
@@ -221,7 +222,14 @@ func MirrorImages(ctx context.Context, log logr.Logger,
 		if err != nil {
 			return mirroredTags, errors.Wrap(err, "unable to Write")
 		}
+
+		mirroredTags = append(mirroredTags, tag)
 	}
 
-	return Union(mirroredTags, missingTags), nil
+	// TODO(dwat): Consider if this can be removed in favor of omitempty...
+	if mirroredTags == nil {
+		return []string{}, nil
+	}
+
+	return mirroredTags, nil
 }

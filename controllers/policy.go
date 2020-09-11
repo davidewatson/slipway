@@ -5,8 +5,11 @@ import (
 	"strings"
 
 	"github.com/Masterminds/semver/v3"
-	//"github.com/fluxcd/flux/pkg/image"
 	"github.com/ryanuber/go-glob"
+	// This dependency was copied into the operator to avoid client-go
+	// dependency conflicts between flux and kubebuilder. This may or
+	// may not be the best solution to an unfortunately common problem.
+	//"github.com/fluxcd/flux/pkg/image"
 )
 
 const (
@@ -29,7 +32,7 @@ type Pattern interface {
 	// String returns the prefixed string representation.
 	String() string
 	// Newer returns true if image `a` is newer than image `b`.
-	//Newer(a, b *image.Info) bool
+	Newer(a, b *Info) bool
 	// Valid returns true if the pattern is considered valid.
 	Valid() bool
 	// RequiresTimestamp returns true if the pattern orders based on timestamp data.
@@ -81,11 +84,10 @@ func (g GlobPattern) String() string {
 	return globPrefix + string(g)
 }
 
-/*
-func (g GlobPattern) Newer(a, b *image.Info) bool {
-	return image.NewerByCreated(a, b)
+func (g GlobPattern) Newer(a, b *Info) bool {
+	return NewerByCreated(a, b)
 }
-*/
+
 func (g GlobPattern) Valid() bool {
 	return true
 }
@@ -110,11 +112,10 @@ func (s SemverPattern) String() string {
 	return semverPrefix + s.pattern
 }
 
-/*
-func (s SemverPattern) Newer(a, b *image.Info) bool {
-	return image.NewerBySemver(a, b)
+func (s SemverPattern) Newer(a, b *Info) bool {
+	return NewerBySemver(a, b)
 }
-*/
+
 func (s SemverPattern) Valid() bool {
 	return s.constraints != nil
 }
@@ -135,11 +136,10 @@ func (r RegexpPattern) String() string {
 	return regexpPrefix + r.pattern
 }
 
-/*
-func (r RegexpPattern) Newer(a, b *image.Info) bool {
-	return image.NewerByCreated(a, b)
+func (r RegexpPattern) Newer(a, b *Info) bool {
+	return NewerByCreated(a, b)
 }
-*/
+
 func (r RegexpPattern) Valid() bool {
 	return r.regexp != nil
 }
