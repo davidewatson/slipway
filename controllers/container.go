@@ -18,6 +18,7 @@ package controllers
 
 import (
 	"context"
+	"strings"
 
 	"github.com/go-logr/logr"
 	"github.com/google/go-containerregistry/pkg/authn"
@@ -141,7 +142,7 @@ func GetNormalizedName(registryName, imageName string) (normalName string) {
 }
 
 // ListImageTags lists tags for the imageName at repoName
-func ListImageTags(ctx context.Context, repoName, imageName string, secretData SecretData) (string, []string, error) {
+func ListImageTags(ctx context.Context, repoName, imageName string, secretData SecretData, log logr.Logger) (string, []string, error) {
 	options := GetRemoteOptions(secretData)
 	normalName := GetNormalizedName(repoName, imageName)
 
@@ -152,6 +153,11 @@ func ListImageTags(ctx context.Context, repoName, imageName string, secretData S
 
 	tags, err := remote.ListWithContext(ctx, repo, options...)
 	if err != nil {
+		if strings.ContainsAny(err.Error(), "repository name not known to registry") {
+			log.Info("NAME_UNKNOWN: [" + repoName + imageName + "] repository does not exist, please create it first")
+			return "", []string{}, nil
+		}
+
 		return "", nil, errors.Wrap(err, "unable to ListWithContext")
 	}
 
@@ -179,13 +185,13 @@ func MirrorImages(ctx context.Context, log logr.Logger,
 	imageMirror slipwayk8sfacebookcomv1.ImageMirror,
 	sourceSecretData, destSecretData SecretData) ([]string, error) {
 
-	sourceName, sourceTags, err := ListImageTags(ctx, imageMirror.Spec.SourceRepo, imageMirror.Spec.ImageName, sourceSecretData)
+	sourceName, sourceTags, err := ListImageTags(ctx, imageMirror.Spec.SourceRepo, imageMirror.Spec.ImageName, sourceSecretData, log)
 	if err != nil {
 		return nil, errors.Wrap(err, "unable to ListImageTags source")
 	}
 	log.Info("Source repository tags", "sourceTags", sourceTags)
 
-	destName, destTags, err := ListImageTags(ctx, imageMirror.Spec.DestRepo, imageMirror.Spec.ImageName, destSecretData)
+	destName, destTags, err := ListImageTags(ctx, imageMirror.Spec.DestRepo, imageMirror.Spec.ImageName, destSecretData, log)
 	if err != nil {
 		return nil, errors.Wrap(err, "unable to ListImageTags dest")
 	}
