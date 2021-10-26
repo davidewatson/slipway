@@ -29,7 +29,7 @@ kubectl apply -f imagemirror.yaml
 
 # Securely Mirroring Images
 
-If no crednetials are provided, slipway uses an anonymous identity when
+If no credentials are provided, slipway uses an anonymous identity when
 authenticating. In most environments this is insecure, and might result in a
 malicious image being mirrored and run. To prevent this is it possible to
 specify basic auth credentials on a per registry basis.
